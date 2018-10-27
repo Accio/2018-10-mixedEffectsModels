@@ -1,6 +1,6 @@
 A tutorial on mixed effects models in R
 ===
-(Jitao David Zhang)[mailto:jitao_david.zhang@roche.com], October 2018
+[Jitao David Zhang](mailto:jitao_david.zhang@roche.com), October 2018
 
 I would like to create a tutorial on mixed effects models in R, focusing on omics data analysis.
 
