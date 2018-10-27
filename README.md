@@ -1,4 +1,4 @@
-A tutorial on mixed effects models in R
+A tutorial on mixed effects models for bioinformatics and computational biology
 ===
 [Jitao David Zhang](mailto:jitao_david.zhang@roche.com), October 2018
 
