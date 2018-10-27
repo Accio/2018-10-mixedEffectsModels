@@ -1,0 +1,126 @@
+---
+title: 'Mixed effects model for bioinformatics and computational biology: a tutorial'
+author: "Jitao David Zhang"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(lme4)
+library("influence.ME")
+```
+
+# The linguistic example
+
+We first follow the great tutorial given by Bodo Winter (Winter, Bodo. “Linear Models and Linear Mixed Effects Models in R with Linguistic Applications.” ArXiv:1308.5499 [Cs], August 26, 2013. http://arxiv.org/abs/1308.5499.) by reproducing his results.
+
+## Data read-in and exploratory analysis
+
+```{r}
+politeness <- read.csv("http://www.bodowinter.com/tutorial/politeness_data.csv")
+```
+
+```{r}
+boxplot(frequency ~ attitude * gender, col=c("lightblue", "lightgray"), data=politeness)
+```
+
+## The first mixed effects model
+
+```{r model1}
+(politenessModel <- lmer(frequency ~ attitude + (1|subject) + (1|scenario), data=politeness))
+```
+
+## The gender model
+
+```{r model2}
+(politenessGenderModel <- lmer(frequency ~ attitude + gender + (1|subject) + (1|scenario), data=politeness))
+```
+
+```{r model2Summary}
+summary(politenessGenderModel)
+```
+
+
+```{r model2Coef}
+coef(politenessGenderModel)
+```
+
+## Comparing with a null model
+
+```{r nullModel}
+(politenessNull <- lmer(frequency ~ gender + (1|subject) + (1|scenario), data=politeness,
+                       REML=FALSE)) ## REML=restricted maximum likelihood
+(politenessFull <- lmer(frequency ~ attitude + gender + (1|subject) + (1|scenario), data=politeness,
+                       REML=FALSE))
+anova(politenessNull, politenessFull)
+```
+
+The author suggested testing the interaction between attitude and gender, which turned out to be insignificant.
+
+```{r interactionModel}
+politenessInteraction <- lmer(frequency ~ attitude*gender + (1|subject) + (1|scenario),
+                              data=politeness, REML=FALSE)
+anova(politenessInteraction, politenessFull)
+```
+
+## Random slope model
+
+Previous models assume that the fixed effects, *i.e.* attitude and gender, are all the same for all subjects and items. Therefore the model is a **random intercept model**. In this model, the baseline differences in pitch are accounted for, but it is assumed that whatever the effect of politness is, it is going to be the same for all subjects and for all scenarios.
+
+But that assumption can be invalid. The effect of politeness might be different for different scenarios, and different for different items. For instance, it can be well imagined that some people are more polite than others. Therefore, a **random slope** model needs to be considered.
+
+```{r randomSlope}
+politenessRandomSlopeModel <- lmer(frequency ~ attitude + gender +
+                                     (1 + attitude|subject) +
+                                     (1 + attitude|scenario), data=politeness, REML=FALSE)
+```
+
+Now we construct the null model. Note that it must have the same random effects structure. So if the full model is a random slope model, the null model must also be a random slope model.
+
+```{r randomSlopeNull}
+politenessRandomSlopeNullModel <- lmer(frequency ~  gender +
+                                     (1 + attitude|subject) +
+                                     (1 + attitude|scenario), data=politeness, REML=FALSE)
+anova(politenessRandomSlopeModel, politenessRandomSlopeNullModel)
+
+```
+
+The results can be reported as "politeness affected pitch ($\chi^2(1)=6.7, p=0.009597$, lowering it by about 19.7Hz $\pm$ 5.6 (standard errors))".
+
+It is recommended that to "keep it maximal" with respect to the random effects structure, at least for controlled expeirments. It means that one should include all random slopes that are justified by the experiment design whenever possible.
+
+## Assumptions
+
+Mixed models are used here to replace simple linear models to resolve non-independendies between subjects and scenarios. One of the most important considerations during setting up a mixed effects model is to carefully dissect and take care of all resouces of non-inpependency.
+
+## Testing influential data points/outliers
+
+The `influence` function in `influence.ME` package iteratively modifies the mixed effects model to neutralize the effect a group set of data has on the parameters, and returns the fixed parameters of these iteratively modified models. It is a good way to check the robustness of the model.
+
+```{r}
+influence(politenessRandomSlopeModel, group="subject")
+```
+
+```{r}
+influence(politenessRandomSlopeModel, group="scenario")
+```
+
+## A definition of random versus fixed models
+
+A random effect is usually something that can be expected to have a non-systematic, idiosyncratic, unpredictable, or "random" influence on the data. It can be *subject*, *item*, *plate*, etc.
+
+Fixed effects, on the other hand, are expected to have a systematic and predictable influence on the data. Alternatively, fixed effects can be defined by effects that *exhaust the population of interest*, or *exhaust the levels of a factor*.
+
+By contrast, random effects generally sample from the population of interest. They are far away from exhausting the population, because there is usually many many more subjects or items that one has not tested.
+
+# A bioinformatician's example
+
+# R session information
+
+```{r}
+sessionInfo()
+```
+
